@@ -293,7 +293,9 @@ public class ChartIQView: UIView {
         case accessibility = "accessibilityHandler"
         case log = "logHandler"
     }
-    
+	
+    internal static var isValidApiKey = true
+	
     internal static let serverError = NSError(domain:"Server error.", code:0, userInfo:nil)
     
     internal static var carrierName: String {
@@ -350,6 +352,12 @@ public class ChartIQView: UIView {
         if let url = URL(string: url) {
             webView.load(URLRequest(url: url))
         }
+    }
+    
+    public func setChartIQWithLocalFileURL(_ url: URL) {
+        webView.loadFileURL(url, allowingReadAccessTo: url)
+        let request = URLRequest(url: url)
+        webView.load(request)
     }
     
     public func setRefreshInterval(_ refreshInterval: Int) {
