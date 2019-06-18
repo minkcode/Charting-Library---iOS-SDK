@@ -65,6 +65,8 @@ public protocol ChartIQDelegate
     ///   - chartIQView: The ChartIQView Object
     ///   - drawings: The drawing objects in JSON format
     @objc optional func chartIQView(_ chartIQView: ChartIQView, didUpdateDrawing drawings: Any)
+	
+	@objc optional func chartIQView(_ chartIQView: ChartIQView, didUpdateCrossHairDetail params: [String: Any])
 }
 
 /// Data Method
@@ -282,6 +284,14 @@ public class ChartIQView: UIView {
             return .linear
         }
     }
+	
+	public var bounces: Bool {
+		get {
+			return webView.scrollView.bounces
+		} set {
+			return webView.scrollView.bounces = newValue
+		}
+	}
     
     fileprivate enum ChartIQCallbackMessage: String {
         case newSymbol = "newSymbolCallbackHandler"
@@ -292,6 +302,7 @@ public class ChartIQView: UIView {
         case drawing = "drawingHandler"
         case accessibility = "accessibilityHandler"
         case log = "logHandler"
+		case crosshairDelegate = "crosshairDelegate"
     }
 	
     internal static var isValidApiKey = true
@@ -332,6 +343,7 @@ public class ChartIQView: UIView {
         webView.configuration.userContentController.removeScriptMessageHandler(forName: ChartIQCallbackMessage.pullPaginationData.rawValue)
         webView.configuration.userContentController.removeScriptMessageHandler(forName: ChartIQCallbackMessage.layout.rawValue)
         webView.configuration.userContentController.removeScriptMessageHandler(forName: ChartIQCallbackMessage.drawing.rawValue)
+		webView.configuration.userContentController.removeScriptMessageHandler(forName: ChartIQCallbackMessage.crosshairDelegate.rawValue)
     }
     
     /// Sets your webview url here.
@@ -386,6 +398,7 @@ public class ChartIQView: UIView {
         userContentController.add(self, name: ChartIQCallbackMessage.layout.rawValue)
         userContentController.add(self, name: ChartIQCallbackMessage.drawing.rawValue)
         userContentController.add(self, name: ChartIQCallbackMessage.log.rawValue)
+		userContentController.add(self, name: ChartIQCallbackMessage.crosshairDelegate.rawValue)
 
         // Create the configuration with the user content controller
         let configuration = WKWebViewConfiguration()
@@ -492,6 +505,14 @@ public class ChartIQView: UIView {
         }
         webView.evaluateJavaScript("setPeriodicity(\(period), \(_interval), \"\(timeUnit)\");", completionHandler: nil)
     }
+	
+	public func setSpan(multipler: Int, base: String = "day", interval: Int, period: Int, timeUnit: String = "minute", maintainPeriodicity: String) {
+		webView.evaluateJavaScript("setSpan(\(multipler), \"\(base)\", \(interval), \(period), \"\(timeUnit), \(maintainPeriodicity)\");", completionHandler: nil)
+	}
+	
+	public func fitRange() {
+		webView.evaluateJavaScript("fitRange()", completionHandler: nil)
+	}
     
     /// Renders a chart for a particular instrument from the data passed in or fetches new data from the attached CIQ.QuoteFeed. This is the method that should be called every time a new chart needs to be drawn for a different instrument.
     ///
@@ -1202,6 +1223,9 @@ extension ChartIQView: WKScriptMessageHandler {
                 msg += value
             }
             NSLog("%@: %@", method, msg)
+		case .crosshairDelegate:
+			let value = message.body as! [String: Any]
+			delegate?.chartIQView?(self, didUpdateCrossHairDetail: value)
         }
     }
 }
